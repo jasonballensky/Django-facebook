@@ -1,25 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import datetime
-import logging
-import unittest
-
-from django.utils.six import StringIO
-
-import mock
 from open_facebook.api import *
+import unittest
+import logging
+import mock
+import datetime
 from open_facebook.exceptions import OpenGraphException
-from open_facebook.utils import json
-from pprint import pprint
-
-try:
-    # python 2 imports
-    from urllib2 import HTTPError
-except ImportError:
-    # python 3 imports
-    from urllib.error import HTTPError
-
 logger = logging.getLogger()
+from open_facebook.utils import json
+
 
 TEST_USER_FORCE_CREATE = False
 TEST_USER_DICT = {
@@ -68,7 +57,8 @@ class OpenFacebookTest(unittest.TestCase):
 
         # capture print statements
         import sys
-        self.prints = sys.stdout = StringIO()
+        import StringIO
+        self.prints = sys.stdout = StringIO.StringIO()
 
     def tearDown(self):
         # complain about print statements
@@ -137,7 +127,7 @@ class TestErrorMapping(OpenFacebookTest):
             try:
                 FacebookConnection.raise_error(response['error']['type'],
                                                response['error']['message'])
-            except open_facebook_exceptions.OAuthException as e:
+            except open_facebook_exceptions.OAuthException, e:
                 oauth = True
             assert oauth, 'response %s didnt raise oauth error' % response
 
@@ -169,9 +159,12 @@ class Test500Detection(OpenFacebookTest):
         This is actually an application error
 
         '''
+        from StringIO import StringIO
         graph = self.guy.graph()
 
         with mock.patch('urllib2.build_opener') as patched:
+            from urllib2 import HTTPError
+
             opener = mock.MagicMock()
             response = StringIO('''{
               "error": {
@@ -197,9 +190,12 @@ class Test500Detection(OpenFacebookTest):
         Exception
 
         '''
+        from StringIO import StringIO
         graph = self.guy.graph()
 
         with mock.patch('urllib2.build_opener') as patched:
+            from urllib2 import HTTPError
+
             opener = mock.MagicMock()
 
             def side_effect(*args, **kwargs):
@@ -256,7 +252,7 @@ class TestPublishing(OpenFacebookTest):
         try:
             guy_graph.set('me/feed', message='Nonnonono')
             raise ValueError('We were expecting a permissions exception')
-        except facebook_exceptions.PermissionException as e:
+        except facebook_exceptions.PermissionException, e:
             pass
 
     def test_og_follow(self):
@@ -310,7 +306,7 @@ class TestOpenFacebook(OpenFacebookTest):
                 code, redirect_uri='http://local.mellowmorning.com:8080')
             facebook = OpenFacebook(user_token['access_token'])
             facebook.me()
-        except open_facebook_exceptions.ParameterException as e:
+        except open_facebook_exceptions.ParameterException, e:
             pass
 
     def test_fql(self):
@@ -322,19 +318,3 @@ class TestOpenFacebook(OpenFacebookTest):
         facebook = self.guy.graph()
         assert 'name' in facebook.me()
         assert facebook.get('fashiolista')
-
-    def test_albums(self):
-        graph = self.guy.graph()
-        graph.version = 'v2.1'
-        albums = graph.get('me/albums', fields='id,type')['data']
-        album_type_dict = {a['type']: a for a in albums}
-        profile_album = album_type_dict.get('profile')
-        cover_album = album_type_dict.get('cover')
-        if profile_album:
-            pictures = graph.get('%s/photos' % profile_album['id'])['data'][:3]
-            for picture in pictures:
-                print(picture['source'])
-        if cover_album:
-            pictures = graph.get('%s/photos' % cover_album['id'])['data'][:3]
-            for picture in pictures:
-                print(picture['source'])

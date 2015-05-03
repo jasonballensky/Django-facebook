@@ -1,17 +1,10 @@
+
 '''
 Facebook error classes also see
 http://fbdevwiki.com/wiki/Error_codes#User_Permission_Errors
 '''
-from __future__ import unicode_literals
-
 import ssl
-
-try:
-    # python 2 imports
-    from urllib2 import HTTPError, URLError
-except ImportError:
-    # python 3 imports
-    from urllib.error import HTTPError, URLError
+import urllib2
 
 
 class OpenFacebookException(Exception):
@@ -144,11 +137,11 @@ class FacebookSSLError(FacebookUnreachable, ssl.SSLError):
     pass
 
 
-class FacebookHTTPError(FacebookUnreachable, HTTPError):
+class FacebookHTTPError(FacebookUnreachable, urllib2.HTTPError):
     pass
 
 
-class FacebookURLError(FacebookUnreachable, URLError):
+class FacebookURLError(FacebookUnreachable, urllib2.URLError):
     pass
 
 
@@ -160,9 +153,9 @@ def map_unreachable_exception(e):
     exception_class = FacebookUnreachable
     if isinstance(e, ssl.SSLError):
         exception_class = FacebookSSLError
-    elif isinstance(e, HTTPError):
+    elif isinstance(e, urllib2.HTTPError):
         exception_class = FacebookHTTPError
-    elif isinstance(e, URLError):
+    elif isinstance(e, urllib2.URLError):
         exception_class = FacebookURLError
     return exception_class
 
@@ -173,7 +166,7 @@ def convert_unreachable_exception(e, error_format='Facebook is unreachable %s'):
     FacebookUnreachable allowing code to easily try except this
     '''
     exception_class = map_unreachable_exception(e)
-    error_message = error_format % str(e)
+    error_message = error_format % e.message
     exception = exception_class(error_message)
     return exception
 

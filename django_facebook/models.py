@@ -1,8 +1,7 @@
-from __future__ import unicode_literals
-from django.utils.encoding import python_2_unicode_compatible
 from django.conf import settings
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes import generic
 from django.contrib.contenttypes.models import ContentType
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models.base import ModelBase
 from django_facebook import model_managers, settings as facebook_settings
@@ -53,7 +52,7 @@ Its recommended to enable FACEBOOK_CELERY_STORE or disable FACEBOOK_STORE_FRIEND
                 'django.core.context_processors.request']
     context_processors = settings.TEMPLATE_CONTEXT_PROCESSORS
     for context_processor in required:
-        if context_processor not in context_processors:
+        if not context_processor in context_processors:
             logger.warn(
                 'Required context processor %s wasnt found', context_processor)
 
@@ -98,7 +97,6 @@ class FACEBOOK_OG_STATE:
         pass
 
 
-@python_2_unicode_compatible
 class BaseFacebookModel(models.Model):
 
     '''
@@ -139,8 +137,8 @@ class BaseFacebookModel(models.Model):
             reauthentication = True
         return reauthentication
 
-    def __str__(self):
-        return self.get_user().username
+    def __unicode__(self):
+        return self.user.__unicode__()
 
     class Meta:
         abstract = True
@@ -298,7 +296,6 @@ class FacebookModel(BaseFacebookModel):
 FacebookProfileModel = FacebookModel
 
 
-@python_2_unicode_compatible
 class FacebookUser(models.Model):
 
     '''
@@ -317,7 +314,7 @@ class FacebookUser(models.Model):
     class Meta:
         unique_together = ['user_id', 'facebook_id']
 
-    def __str__(self):
+    def __unicode__(self):
         return u'Facebook user %s' % self.name
 
 
@@ -359,7 +356,7 @@ if getattr(settings, 'AUTH_USER_MODEL', None) == 'django_facebook.FacebookCustom
             objects = UserManager()
             # add any customizations you like
             state = models.CharField(max_length=255, blank=True, null=True)
-    except ImportError as e:
+    except ImportError, e:
         logger.info('Couldnt setup FacebookUser, got error %s', e)
 
 
@@ -386,7 +383,6 @@ class BaseModelMetaclass(ModelBase):
         return super_new
 
 
-@python_2_unicode_compatible
 class BaseModel(models.Model):
 
     '''
@@ -394,7 +390,7 @@ class BaseModel(models.Model):
     '''
     __metaclass__ = BaseModelMetaclass
 
-    def __str__(self):
+    def __unicode__(self):
         '''
         Looks at some common ORM naming standards and tries to display those before
         default to the django default
@@ -412,7 +408,6 @@ class BaseModel(models.Model):
         abstract = True
 
 
-@python_2_unicode_compatible
 class CreatedAtAbstractBase(BaseModel):
 
     '''
@@ -433,7 +428,7 @@ class CreatedAtAbstractBase(BaseModel):
         saved = models.Model.save(self, *args, **kwargs)
         return saved
 
-    def __str__(self):
+    def __unicode__(self):
         '''
         Looks at some common ORM naming standards and tries to display those before
         default to the django default
@@ -504,10 +499,9 @@ class OpenGraphShare(BaseModel):
 
     # what we are sharing, dict and object
     share_dict = models.TextField(blank=True, null=True)
-
     content_type = models.ForeignKey(ContentType, blank=True, null=True)
     object_id = models.PositiveIntegerField(blank=True, null=True)
-    content_object = GenericForeignKey('content_type', 'object_id')
+    content_object = generic.GenericForeignKey('content_type', 'object_id')
 
     # completion data
     error_message = models.TextField(blank=True, null=True)
@@ -546,7 +540,8 @@ class OpenGraphShare(BaseModel):
             self.user, profile, 'access_token')
         graph = graph or user_or_profile.get_offline_graph()
         user_enabled = shared_explicitly or \
-            (user_or_profile.facebook_open_graph and self.facebook_user_id)
+            (user_or_profile.facebook_open_graph
+             and self.facebook_user_id)
         # start sharing
         if graph and user_enabled:
             graph_location = '%s/%s' % (
@@ -565,9 +560,9 @@ class OpenGraphShare(BaseModel):
                 self.error_message = None
                 self.completed_at = datetime.now()
                 self.save()
-            except OpenFacebookException as e:
+            except OpenFacebookException, e:
                 logger.warn(
-                    'Open graph share failed, writing message %s' % str(e))
+                    'Open graph share failed, writing message %s' % e.message)
                 self.error_message = repr(e)
                 self.save()
                 # maybe we need a new access token
