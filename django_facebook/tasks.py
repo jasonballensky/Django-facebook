@@ -1,8 +1,9 @@
+from functools import wraps
+import logging
 from celery import task
 from django.db import IntegrityError
-import logging
 from django_facebook.utils import get_class_for
-from functools import wraps
+from django_facebook.signals import facebook_token_extend_finished
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ def get_and_store_likes(user, facebook):
         stored_likes = facebook._get_and_store_likes(user)
         logger.info('celery is storing %s likes', len(stored_likes))
         return stored_likes
-    except IntegrityError, e:
+    except IntegrityError as e:
         logger.warn(
             'get_and_store_likes failed for %s with error %s', user.id, e)
 
@@ -101,7 +102,7 @@ def get_and_store_friends(user, facebook):
         stored_friends = facebook._get_and_store_friends(user)
         logger.info('celery is storing %s friends', len(stored_friends))
         return stored_friends
-    except IntegrityError, e:
+    except IntegrityError as e:
         logger.warn(
             'get_and_store_friends failed for %s with error %s', user.id, e)
 
@@ -147,5 +148,4 @@ def token_extended_connect(sender, user, profile, token_changed, old_token, **kw
         # make sure we don't have troubles caused by replication lag
         retry_open_graph_shares_for_user.apply_async(args=[user], countdown=60)
 
-from django_facebook.signals import facebook_token_extend_finished
 facebook_token_extend_finished.connect(token_extended_connect)
