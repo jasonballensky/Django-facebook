@@ -1,10 +1,11 @@
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.shortcuts import render_to_response
 from django.contrib.auth import models as auth_models
 from django import template
 from collections import defaultdict
 import logging
 logger = logging.getLogger(__name__)
+from django.contrib import messages
 
 
 def retry_facebook_invite(modeladmin, request, queryset):

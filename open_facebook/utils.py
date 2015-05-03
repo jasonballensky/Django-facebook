@@ -2,13 +2,6 @@ import logging
 import re
 import sys
 import functools
-import json
-
-from django.utils import six
-try:
-    unicode = unicode
-except NameError:
-    unicode = str
 
 logger = logging.getLogger(__name__)
 URL_PARAM_RE = re.compile('(?P<k>[^(=|&)]+)=(?P<v>[^&]+)(&|$)')
@@ -83,7 +76,7 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
     import types
     if strings_only and isinstance(s, (types.NoneType, int)):
         return s
-    elif not isinstance(s, six.string_types):
+    elif not isinstance(s, basestring):
         try:
             return str(s)
         except UnicodeEncodeError:
@@ -100,6 +93,11 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
         return s.decode('utf-8', errors).encode(encoding, errors)
     else:
         return s
+
+
+# we are no longer supporting python 2.5
+# so we can simply assume import json works
+import json
 
 
 def send_warning(message, request=None, e=None, **extra_data):
